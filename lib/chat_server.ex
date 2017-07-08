@@ -31,9 +31,11 @@ defmodule ChatServer do
   portでサーバを起動して、クライアントからの接続受付を開始する
   """
   def do_process([port]) do
+    Logger.info "To Start Server Controll Loop"
     pid = spawn_link(fn -> ServerControll.init_server_loop() end)
     Process.register pid, :chat_server  # サーバプロセスのpidを:chat_serverというアトムに割り当てている
     {:ok, sock} = :gen_tcp.listen(port, [:binary, packet: 0, active: false])
+    Logger.info "To Start Client Controll Loop"
     ClientControll.client_loop(sock)
   end
 
@@ -58,6 +60,7 @@ defmodule ChatServer do
   メインプログラム
   """
   def main(opts) do
+    Logger.info "Chat Server is Running !"
     opts |> parse_argv |> do_process
   end
 end

@@ -5,6 +5,8 @@ defmodule ClientControll do
   """
   require Logger
 
+  @announce_user_name "announce-san"
+
   @doc """
   クライアントからの接続が来たらacceptしてソケットを戻す
   ここで、sockはサーバのソケットで、clientはクライアントとの接続のためののsocket
@@ -29,20 +31,31 @@ defmodule ClientControll do
   """
   def writing_wait(client, announce_pid) do
     Logger.info "writing wait"
-    {:ok, data} = :gen_tcp.recv(client, 0)
-    data |> IO.inspect
-    data = data |> eval
+    data = try do
+      {:ok, data} = :gen_tcp.recv(client, 0)
+      data |> eval |> IO.inspect
+    rescue
+      # 想定外のdataが投げられてくるときがあるので、rescueしてコネクションをclose
+      e in MatchError ->
+        Logger.warn "MatchError: Maybe unxpected connection break."
+        %{event: "error"}
+    end
 
     case data.event do
+      "error" ->
+        # send(:chat_server, {:leave, announce_pid, "\\someone unexpected"})
+        send(:chat_server, {:exit, announce_pid})
       "exit" ->
         Logger.info "exit command"
-        :timer.sleep(100)
-        :gen_tcp.send(client, "/exit")
-        send(:chat_server, {:announce, announce_pid, "#{data.username} Leaved."})
+        # send(:chat_server, {:leave, announce_pid, data.username})
         send(:chat_server, {:exit, announce_pid})
-      "user_list" ->
-        Logger.info "user list command"
-        send(:chat_server, {:user_list, announce_pid})
+      "user_list_pid" ->
+        Logger.info "user list from pid command"
+        send(:chat_server, {:user_list_pid, announce_pid})
+        client |> writing_wait(announce_pid)
+      "user_list_channel" ->
+        Logger.info "user list from channel command"
+        send(:chat_server, {:user_list_channel, announce_pid, data.channel})
         client |> writing_wait(announce_pid)
       "channel_list" ->
         Logger.info "channel list command"
@@ -54,9 +67,16 @@ defmodule ClientControll do
         client |> writing_wait(announce_pid)
       "move" ->
         Logger.info "move command"
-        send(:chat_server, {:announce, announce_pid, "#{data.username} Leaved."})
-        send(:chat_server, {:move, announce_pid, data.channel})
-        send(:chat_server, {:announce, announce_pid, "#{data.username} Joined."})
+        send(:chat_server, {:move,  announce_pid, data.channel})
+        client |> writing_wait(announce_pid)
+      "create" ->
+        Logger.info "create command"
+        send(:chat_server, {:create, announce_pid, data.channel})
+        send(:chat_server, {:move,   announce_pid, data.channel})
+        client |> writing_wait(announce_pid)
+      "delete" ->
+        Logger.info "delete command"
+        send(:chat_server, {:delete, announce_pid, data.channel})
         client |> writing_wait(announce_pid)
       "whisper" ->
         Logger.info "whisper command"
@@ -67,6 +87,16 @@ defmodule ClientControll do
         send(:chat_server, {:say, announce_pid, data.username, data.body})
         client |> writing_wait(announce_pid)
     end
+  end
+
+  @doc """
+  リストの一番うしろの要素を削除したリストを返す
+  """
+  def remove_last([last,_]) do
+    [last]
+  end
+  def remove_last([head|tail]) do
+    [head] ++ remove_last(tail)
   end
 
   @doc """
@@ -83,17 +113,23 @@ defmodule ClientControll do
         Logger.info "show user list"
         :gen_tcp.send(client, list)
         client |> announce_wait
-      {:move, channel} ->
-        Logger.info "move to #{channel} channel\n"
-        :gen_tcp.send(client, "You move to #{channel} channel\n")
+      {:join, username, channel} ->
+        Logger.info "join to any channel\n"
+        :gen_tcp.send(client, "#{@announce_user_name}:\n  #{username} Joined to #{channel}\n")
+        client |> announce_wait
+      {:leave, username, channel} ->
+        Logger.info "leave from any channel\n"
+        :gen_tcp.send(client, "#{@announce_user_name}:\n  #{username} Leaved from #{channel}\n")
         client |> announce_wait
       {:say, username, body} ->
         Logger.info "say recv from other client"
-        :gen_tcp.send(client, "#{username}: #{body}")
+        message = body |> String.split("\n") |> remove_last |> Enum.map(&("  " <> &1)) |> Enum.join("\n")
+        :gen_tcp.send(client, "#{username}:\n#{message}\n")
         client |> announce_wait
       {:announce, body} ->
         Logger.info "say recv from other client"
-        :gen_tcp.send(client, "#{"Owner"}: #{body}")
+        message = body |> String.split("\n") |> remove_last |> Enum.map(&("  " <> &1)) |> Enum.join("\n")
+        :gen_tcp.send(client, "#{@announce_user_name}:\n#{message}\n")
         client |> announce_wait
     end
   end
@@ -104,13 +140,13 @@ defmodule ClientControll do
   """
   def client_loop(sock) do
     client = accept(sock)
+    Logger.info "Client Accept !"
     {:ok, username} = :gen_tcp.recv(client,0)
     announce = Task.async(fn -> client |> announce_wait end)
     # 実際にclientをcloseするのがannounce_waitプロセスのため、controlling_processに割り当てている
     :ok = :gen_tcp.controlling_process(client, announce.pid)
     # Clientからの切断要請を受け、writing.pidを接続されているクライアント一覧から削除するため
     send(:chat_server, {:new, announce.pid, username})
-        send(:chat_server, {:announce, announce.pid, "#{username} Joined."})
 
     Task.async(fn -> client |> writing_wait(announce.pid) end)
 
