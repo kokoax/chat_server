@@ -1,0 +1,304 @@
+    <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="ExDoc v0.16.2">
+    <title>ClientControll – chat_server v0.1.0</title>
+    <link rel="stylesheet" href="dist/app-268c9dc719.css" />
+    
+      <link rel="canonical" href="https://hexdocs.pm/chat_server/ClientControll.html" />
+    
+    <script src="dist/sidebar_items-d4e4f2a6a3.js"></script>
+  </head>
+  <body data-type="modules">
+    <script>try { if(localStorage.getItem('night-mode')) document.body.className += ' night-mode'; } catch (e) { }</script>
+
+    <div class="main">
+<button class="sidebar-toggle">
+  <span class="icon-menu" aria-hidden="true"></span>
+  <span class="sr-only">Toggle Sidebar</span>
+</button>
+<section class="sidebar">
+
+  
+  <a href="api-reference.html" class="sidebar-projectLink">
+    <div class="sidebar-projectDetails">
+      <h1 class="sidebar-projectName">
+        chat_server
+      </h1>
+      <h2 class="sidebar-projectVersion">
+        v0.1.0
+      </h2>
+    </div>
+    
+  </a>
+
+  <div class="sidebar-search">
+    <span class="icon-search" aria-hidden="true"></span>
+    <input type="text" class="sidebar-searchInput" placeholder="search" aria-label="Search" autocomplete="off" />
+  </div>
+
+  <ul class="sidebar-listNav">
+    <li><a id="extras-list" href="#full-list">Pages</a></li>
+
+    
+      <li><a id="modules-list" href="#full-list">Modules</a></li>
+    
+
+    
+
+    
+
+    
+  </ul>
+  <div class="gradient"></div>
+  <ul id="full-list" class="sidebar-fullList"></ul>
+</section>
+
+<section class="content">
+  <div class="content-outer">
+    <div id="content" class="content-inner">
+
+
+      <h1>
+        <small class="visible-xs">chat_server v0.1.0</small>
+        ClientControll
+        
+      </h1>
+
+      
+        <section id="moduledoc">
+          <p>サーバに接続してきたクライアントそれぞれに、ソケットを開き、
+クライアントの、データ受信と送信を管理する。</p>
+
+        </section>
+      
+
+      
+        <section id="summary" class="details-list">
+          <h1 class="section-heading">
+            <a class="hover-link" href="#summary">
+              <span class="icon-link" aria-hidden="true"></span>
+              <span class="sr-only">Link to this section</span>
+            </a>
+            Summary
+          </h1>
+          
+
+          
+  <div class="summary-functions summary">
+    <h2>
+      <a href="#functions">Functions</a>
+    </h2>
+    <div class="summary-row">
+  <div class="summary-signature">
+    <a href="#accept/1">accept(sock)</a>
+  </div>
+  
+    <div class="summary-synopsis"><p>クライアントからの接続が来たらacceptしてソケットを戻す
+ここで、sockはサーバのソケットで、clientはクライアントとの接続のためののsocket</p>
+</div>
+  
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="#announce_wait/1">announce_wait(client)</a>
+  </div>
+  
+    <div class="summary-synopsis"><p>特定の形で、クライアントにメッセージを送信する処理を行うプロセス</p>
+</div>
+  
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="#client_loop/1">client_loop(sock)</a>
+  </div>
+  
+    <div class="summary-synopsis"><p>クライアントからの接続を受けたら、クライアントに対する処理を並列化して実行し、
+次のクライアントからの接続を待つ処理を繰り返す</p>
+</div>
+  
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="#eval/1">eval(str)</a>
+  </div>
+  
+    <div class="summary-synopsis"><p>クライアントからのメッセージは、elixirのMapというデータ構造を文字列にしたもの
+を送信するので、受信したらそのままevalすることで、データを取り出すことができる</p>
+</div>
+  
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="#remove_last/1">remove_last(list)</a>
+  </div>
+  
+    <div class="summary-synopsis"><p>リストの一番うしろの要素を削除したリストを返す</p>
+</div>
+  
+</div>
+<div class="summary-row">
+  <div class="summary-signature">
+    <a href="#writing_wait/2">writing_wait(client, announce_pid)</a>
+  </div>
+  
+    <div class="summary-synopsis"><p>クライアントから送られてきたデータを解析する
+主に、クライアントから指定されたイベントに応じて処理を振り分けるプロセス</p>
+</div>
+  
+</div>
+
+  </div>
+
+
+          
+
+        </section>
+      
+
+      
+
+      
+        <section id="functions" class="details-list">
+          <h1 class="section-heading">
+            <a class="hover-link" href="#functions">
+              <span class="icon-link" aria-hidden="true"></span>
+              <span class="sr-only">Link to this section</span>
+            </a>
+            Functions
+          </h1>
+          <div class="detail" id="accept/1">
+  
+  <div class="detail-header">
+    <a href="#accept/1" class="detail-link" title="Link to this function">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <span class="signature">accept(sock)</span>
+    
+    
+    
+  </div>
+  <section class="docstring">
+    <p>クライアントからの接続が来たらacceptしてソケットを戻す
+ここで、sockはサーバのソケットで、clientはクライアントとの接続のためののsocket</p>
+
+  </section>
+</div>
+<div class="detail" id="announce_wait/1">
+  
+  <div class="detail-header">
+    <a href="#announce_wait/1" class="detail-link" title="Link to this function">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <span class="signature">announce_wait(client)</span>
+    
+    
+    
+  </div>
+  <section class="docstring">
+    <p>特定の形で、クライアントにメッセージを送信する処理を行うプロセス</p>
+
+  </section>
+</div>
+<div class="detail" id="client_loop/1">
+  
+  <div class="detail-header">
+    <a href="#client_loop/1" class="detail-link" title="Link to this function">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <span class="signature">client_loop(sock)</span>
+    
+    
+    
+  </div>
+  <section class="docstring">
+    <p>クライアントからの接続を受けたら、クライアントに対する処理を並列化して実行し、
+次のクライアントからの接続を待つ処理を繰り返す</p>
+
+  </section>
+</div>
+<div class="detail" id="eval/1">
+  
+  <div class="detail-header">
+    <a href="#eval/1" class="detail-link" title="Link to this function">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <span class="signature">eval(str)</span>
+    
+    
+    
+  </div>
+  <section class="docstring">
+    <p>クライアントからのメッセージは、elixirのMapというデータ構造を文字列にしたもの
+を送信するので、受信したらそのままevalすることで、データを取り出すことができる</p>
+
+  </section>
+</div>
+<div class="detail" id="remove_last/1">
+  
+  <div class="detail-header">
+    <a href="#remove_last/1" class="detail-link" title="Link to this function">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <span class="signature">remove_last(list)</span>
+    
+    
+    
+  </div>
+  <section class="docstring">
+    <p>リストの一番うしろの要素を削除したリストを返す</p>
+
+  </section>
+</div>
+<div class="detail" id="writing_wait/2">
+  
+  <div class="detail-header">
+    <a href="#writing_wait/2" class="detail-link" title="Link to this function">
+      <span class="icon-link" aria-hidden="true"></span>
+      <span class="sr-only">Link to this function</span>
+    </a>
+    <span class="signature">writing_wait(client, announce_pid)</span>
+    
+    
+    
+  </div>
+  <section class="docstring">
+    <p>クライアントから送られてきたデータを解析する
+主に、クライアントから指定されたイベントに応じて処理を振り分けるプロセス</p>
+
+  </section>
+</div>
+
+        </section>
+      
+
+      
+          <footer class="footer">
+        <p>
+          <span class="line">
+            Built using
+            <a href="https://github.com/elixir-lang/ex_doc" title="ExDoc" rel="help" target="_blank">ExDoc</a> (v0.16.2),
+          </span>
+          <span class="line">
+            designed by
+            <a href="https://twitter.com/dignifiedquire" target="_blank" title="@dignifiedquire">Friedel Ziegelmayer</a>.
+            </span>
+        </p>
+        <button class="night-mode-toggle"><span class="sr-only">Switch theme</span></button>
+      </footer>
+    </div>
+  </div>
+</section>
+</div>
+  <script src="dist/app-4988ddd06b.js"></script>
+  </body>
+</html>
+
