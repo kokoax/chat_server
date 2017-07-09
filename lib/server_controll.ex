@@ -57,8 +57,15 @@ defmodule ServerControll do
   def mod_channel(pid, channel) do
     Process.get(:user)
     |> Enum.map(fn(data) ->
-      if data.pid == pid do %{pid: data.pid, username: data.username, channel: channel}
-      else data end
+      if data.pid == pid do
+        %{
+          pid: data.pid,
+          username: data.username,
+          channel: channel
+        }
+      else
+        data
+      end
     end)
   end
 
@@ -210,7 +217,8 @@ defmodule ServerControll do
       {:new, pid, username} ->  # 新しく参加したクライアントの情報を登録
         Logger.info "New connection create command on server"
         Process.put(:user, add_userdata(pid, username, @def_channel))
-        saying(pid, {:join, username, @def_channel}, true)  # TODO: channelを初期設定できるようにする
+        # TODO: channelを初期設定できるようにする
+        saying(pid, {:join, username, @def_channel}, true)
         server_loop()
 
       {:now_channel, pid} -> # リクエストしてきたクライアントが現在所属しているチャンネルをsend
@@ -224,14 +232,16 @@ defmodule ServerControll do
         send(pid, {:channel_list, "#{Process.get(:channel_list) |> Enum.join("\n")}\n"})
         server_loop()
 
-      {:user_list_pid, pid} -> # サーバに接続しているクライアントのユーザ名のリストをsend
+      # サーバに接続しているクライアントのユーザ名のリストをsend
+      {:user_list_pid, pid} ->
         Logger.info "user list pid command on server"
         user_list = get_user_list(%{pid: pid})
         # TODO: check 自分の所属しているチャンネルのユーザ一覧なので、絶対にユーザを見つけることができるはず
         send(pid, {:user_list, "#{user_list |> Enum.join("\n")}\n"})
         server_loop()
 
-      {:user_list_channel, pid, channel} -> # サーバに接続しているクライアントのユーザ名のリストをsend
+      # サーバに接続しているクライアントのユーザ名のリストをsend
+      {:user_list_channel, pid, channel} ->
         Logger.info "user list channel command on server"
         user_list = get_user_list(%{channel: channel})
         if user_list == nil do
@@ -257,16 +267,24 @@ defmodule ServerControll do
       {:delete, pid, channel} ->
         Logger.info "Delete command on server"
         cond do
-          Process.get(:channel_list) |> Enum.filter(&(&1 == channel)) |> Enum.count == 0 ->
+          Process.get(:channel_list)
+          |> Enum.filter(&(&1 == channel))
+          |> Enum.count == 0 ->
             Logger.info "Missing. Don't exist #{channel} channel\n"
             send(pid, {:announce, "Don't exist #{channel} channel\n"})
-          Process.get(:user) |> Enum.filter(&(&1.channel == channel)) |> Enum.count == 0 ->
+          Process.get(:user)
+          |> Enum.filter(&(&1.channel == channel))
+          |> Enum.count == 0 ->
             Logger.info "Delete #{channel} channel successful\n"
-            Process.put(:channel_list, Process.get(:channel_list) |> Enum.filter(&(&1 != channel)))
-            send(pid, {:announce, "Delete #{channel} channel successful\n"})
+            Process.put(
+              :channel_list,
+              Process.get(:channel_list) |> Enum.filter(&(&1 != channel)))
+            send(pid,{:announce, "Delete #{channel} channel successful\n"})
           true ->
             Logger.info "Missing. This #{channel} channel has user\n"
-            send(pid, {:announce, "Delete missing.\nThis #{channel} channel has user\n"})
+            send(pid,
+              {:announce,
+                "Delete missing.\nThis #{channel} channel has user\n"})
         end
         server_loop()
 
@@ -289,14 +307,16 @@ defmodule ServerControll do
         end
         server_loop()
 
-      {:whisper, pid, send_user, opponent, body} -> # 指定されたユーザ名(opponent)のユーザに対してメッセージ(body)を送信
+      # 指定されたユーザ名(opponent)のユーザに対してメッセージ(body)を送信
+      {:whisper, pid, send_user, opponent, body} ->
         Logger.info "Wihsper command on server"
         opp_data = get_user_data(%{username: opponent})
         cond do
           opp_data == nil ->
             Logger.info "Not found user"
             send(pid, {:announce, "Not found user\n"})
-          opp_data.username == send_user -> # TODO: ユーザ名がかぶってると想定外の動作になる
+          # TODO: ユーザ名がかぶってると想定外の動作になる
+          opp_data.username == send_user ->
             Logger.info "Whisping to myself"
             send(pid, {:announce, "It's you!\n"})
           true ->
@@ -322,12 +342,15 @@ defmodule ServerControll do
         )
         server_loop()
 
-      {:say, sender_pid, username, body} -> # sender_pidと同じチャンネルのユーザに対してsender_pidからのメッセージを送信
+      # sender_pidと同じチャンネルのユーザに対してsender_pidからのメッセージを送信
+      {:say, sender_pid, username, body} ->
         Logger.info "Say command on server"
         saying(sender_pid, {:say, username, body})
         server_loop()
 
-      {:announce, sender_pid, body} -> #  sender_pidと同じチャンネルのユーザに対してサーバからのアナウンスメッセージを送信
+        # sender_pidと同じチャンネルのユーザに対して
+        # サーバからのアナウンスメッセージを送信
+      {:announce, sender_pid, body} ->
         Logger.info "Announce command on server"
         saying(sender_pid, {:annouce, body})
         server_loop()
