@@ -145,12 +145,12 @@ defmodule ClientControll do
   def client_loop(sock) do
     client = accept(sock)
     Logger.info "Client Accept !"
-    {:ok, username} = :gen_tcp.recv(client,0)
+    {:ok, user_data} = :gen_tcp.recv(client,0)
     announce = Task.async(fn -> client |> announce_wait end)
     # 実際にclientをcloseするのがannounce_waitプロセスのため、controlling_processに割り当てている
     :ok = :gen_tcp.controlling_process(client, announce.pid)
     # Clientからの切断要請を受け、writing.pidを接続されているクライアント一覧から削除するため
-    send(:chat_server, {:new, announce.pid, username})
+    send(:chat_server, {:new, announce.pid, user_data |> eval})
 
     Task.async(fn -> client |> writing_wait(announce.pid) end)
 

@@ -39,6 +39,12 @@ defmodule ServerControll do
   """
   def add_userdata(pid, username, channel) do
     Logger.info "User add on Server"
+    channel = if channel == nil do
+      @def_channel
+    else
+      channel
+    end
+
     have_user = Process.get(:user)
     # nilなら登録されているユーザがいないので、リスト連結ができないため
     # 処理を分けている
@@ -214,11 +220,12 @@ defmodule ServerControll do
   """
   def server_loop do
     receive do
-      {:new, pid, username} ->  # 新しく参加したクライアントの情報を登録
+      {:new, pid, %{username: username, channel: channel}} ->  # 新しく参加したクライアントの情報を登録
         Logger.info "New connection create command on server"
-        Process.put(:user, add_userdata(pid, username, @def_channel))
+        Process.put(:user, add_userdata(pid, username, channel))
+        user_data = get_user_data(%{pid: pid})
         # TODO: channelを初期設定できるようにする
-        saying(pid, {:join, username, @def_channel}, true)
+        saying(pid, {:join, user_data.username, user_data.channel}, true)
         server_loop()
 
       {:now_channel, pid} -> # リクエストしてきたクライアントが現在所属しているチャンネルをsend
