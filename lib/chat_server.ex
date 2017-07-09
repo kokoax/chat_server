@@ -34,8 +34,9 @@ defmodule ChatServer do
     Logger.info "To Start Server Controll Loop"
     pid = spawn_link(fn -> ServerControll.init_server_loop() end)
     Process.register pid, :chat_server  # サーバプロセスのpidを:chat_serverというアトムに割り当てている
-    {:ok, sock} = :gen_tcp.listen(port, [:binary, packet: 0, active: false])
+
     Logger.info "To Start Client Controll Loop"
+    {:ok, sock} = :gen_tcp.listen(port, [:binary, packet: 0, active: false])
     ClientControll.client_loop(sock)
   end
 

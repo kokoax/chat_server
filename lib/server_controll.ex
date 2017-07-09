@@ -271,12 +271,13 @@ defmodule ServerControll do
         Logger.info "New connection create command on server"
         case user_check(pid, username, channel) do
           {:err, err_text} ->
-            send(pid, {:announce, err_text})
+            # 新しくユーザをサーバに登録できなかったら
+            send(pid, {:error, err_text})
           {:ok, new_user} ->
             add_userdata(new_user)
             saying(pid, {:join, new_user.username, new_user.channel}, true)
-            server_loop()
         end
+        server_loop()
 
       # リクエストしてきたクライアントが現在所属しているチャンネルをsend
       {:now_channel, pid} ->
@@ -303,8 +304,8 @@ defmodule ServerControll do
         Logger.info "user list channel command on server"
         user_list = get_user_list(%{channel: channel})
         if user_list == nil do
-          Logger.info "This #{channel} channel don't have user."
-          send(pid, {:announce, "This #{channel} channel don't have user.\n"})
+          Logger.info "#{channel} channel don't have user."
+          send(pid, {:announce, "#{channel} channel don't have user.\n"})
         else
           Logger.info "Success user list channel"
           send(pid, {:user_list, "#{user_list |> Enum.join("\n")}\n"})
@@ -312,6 +313,8 @@ defmodule ServerControll do
         Logger.info "user list channel is over"
         server_loop()
 
+      # 指定したchannelを新しく作成し、作成したユーザを
+      # 新しく作成したチャンネルへ移動
       {:create, pid, channel} ->
         Logger.info "Create command on server"
         if not (Process.get(:channel_list) |> Enum.any?(&(&1 == channel))) do
@@ -322,6 +325,7 @@ defmodule ServerControll do
         end
         server_loop()
 
+      # 指定したchannelを削除する
       {:delete, pid, channel} ->
         Logger.info "Delete command on server"
         cond do
@@ -339,10 +343,10 @@ defmodule ServerControll do
               Process.get(:channel_list) |> Enum.filter(&(&1 != channel)))
             send(pid,{:announce, "Delete #{channel} channel successful\n"})
           true ->
-            Logger.info "Missing. This #{channel} channel has user\n"
+            Logger.info "Missing. #{channel} channel has user\n"
             send(pid,
               {:announce,
-                "Delete missing.\nThis #{channel} channel has user\n"})
+                "Delete missing.\n#{channel} channel has user\n"})
         end
         server_loop()
 
@@ -392,12 +396,17 @@ defmodule ServerControll do
       {:exit, pid} -> # pidのユーザをサーバから削除
         Logger.info "Exit command on server"
         user_data = get_user_data(%{pid: pid})
-        saying(pid, {:leave, user_data.username, user_data.channel}, false)
+        # ログイン時エラーとかだと、ユーザデータを取得できない場合もある
+        if user_data != nil do
+          saying(pid, {:leave, user_data.username, user_data.channel}, false)
+          Process.put(
+            :user,
+            Process.get(:user)
+            |> Enum.filter(fn(user_data) -> user_data.pid != pid end)
+          )
+        end
+        send(pid, {:exit})
         # exitしたpidのユーザ情報をfilterにかけて削除したものを再登録
-        Process.put(
-          :user,
-          Process.get(:user) |> Enum.filter(fn(data) -> data.pid != pid end)
-        )
         server_loop()
 
       # sender_pidと同じチャンネルのユーザに対してsender_pidからのメッセージを送信

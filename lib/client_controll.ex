@@ -33,6 +33,7 @@ defmodule ClientControll do
     Logger.info "writing wait"
     data = try do
       {:ok, data} = :gen_tcp.recv(client, 0)
+      data |> IO.inspect
       data |> eval |> IO.inspect
     rescue
       # 想定外のdataが投げられてくるときがあるので、rescueしてコネクションをclose
@@ -42,16 +43,15 @@ defmodule ClientControll do
     end
 
     case data.event do
-      "error" ->
-        # send(:chat_server, {:leave, announce_pid, "\\someone unexpected"})
-        send(:chat_server, {:exit, announce_pid})
       "help" ->
         Logger.info "help command"
         send(:chat_server, {:help, announce_pid})
         client |> writing_wait(announce_pid)
+      "error" ->
+        Logger.info "error happen in login"
+        send(:chat_server, {:exit, announce_pid})
       "exit" ->
         Logger.info "exit command"
-        # send(:chat_server, {:leave, announce_pid, data.username})
         send(:chat_server, {:exit, announce_pid})
       "user_list_pid" ->
         Logger.info "user list from pid command"
@@ -111,29 +111,61 @@ defmodule ClientControll do
     receive do
       {:channel_list, list} ->
         Logger.info "show channel list"
-        :gen_tcp.send(client, list)
+        data = ~s(%{event: "message", message: "#{list}"})
+        :gen_tcp.send(client, data)
         client |> announce_wait
+
       {:user_list, list} ->
         Logger.info "show user list"
-        :gen_tcp.send(client, list)
+        data = ~s(%{event: "message", message: "#{list}"})
+        :gen_tcp.send(client, data)
         client |> announce_wait
+
       {:join, username, channel} ->
         Logger.info "join to any channel\n"
-        :gen_tcp.send(client, "#{@announce_user_name}:\n  #{username} Joined to #{channel}\n")
+        data = ~s(%{event: "message", message: "#{@announce_user_name}:\n  #{username} Joined to #{channel}\n"})
+        :gen_tcp.send(client, data)
         client |> announce_wait
+
       {:leave, username, channel} ->
         Logger.info "leave from any channel\n"
-        :gen_tcp.send(client, "#{@announce_user_name}:\n  #{username} Leaved from #{channel}\n")
+        data = ~s(%{event: "message", message: "#{@announce_user_name}:\n  #{username} Leaved from #{channel}\n"})
+        :gen_tcp.send(client, data)
         client |> announce_wait
+
       {:say, username, body} ->
         Logger.info "say recv from other client"
         message = body |> String.split("\n") |> remove_last |> Enum.map(&("  " <> &1)) |> Enum.join("\n")
-        :gen_tcp.send(client, "#{username}:\n#{message}\n")
+        data = ~s(%{event: "message", message: "#{username}:\n#{message}\n"})
+        :gen_tcp.send(client, data)
         client |> announce_wait
+
+      {:error, body} ->
+        Logger.info "error happen and close session"
+        message =
+          body
+          |> String.split("\n")
+          |> remove_last
+          |> Enum.map(&("  " <> &1))
+          |> Enum.join("\n")
+        data = ~s(%{event: "error", message: "#{@announce_user_name}:\n#{message}\n"})
+        :gen_tcp.send(client, data)
+
+      {:exit} ->
+        Logger.info "exit of session"
+        data = ~s(%{event: "exit", message: "Session is over.\n"})
+        :gen_tcp.send(client, data)
+
       {:announce, body} ->
         Logger.info "say recv from other client"
-        message = body |> String.split("\n") |> remove_last |> Enum.map(&("  " <> &1)) |> Enum.join("\n")
-        :gen_tcp.send(client, "#{@announce_user_name}:\n#{message}\n")
+        message =
+          body
+          |> String.split("\n")
+          |> remove_last
+          |> Enum.map(&("  " <> &1))
+          |> Enum.join("\n")
+        data = ~s(%{event: "message", message: "#{@announce_user_name}:\n#{message}\n"})
+        :gen_tcp.send(client, data)
         client |> announce_wait
     end
   end
