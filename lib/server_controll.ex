@@ -6,6 +6,19 @@ defmodule ServerControll do
   require Logger
   @def_channel "general"
   @def_channel_list ["general", "random"]
+  @help """
+  :exit -> クライアントを終了する。
+  :help -> ヘルプを表示する。
+  :channel_list -> チャンネルの一覧を表示する。
+  :now_channel -> クライアントが現在所属しているチャンネルを表示する。
+  :user_list -> クライアントが現在所属しているチャンネルのユーザ一覧を表示する。
+  :user_list $(channel) -> 指定したchannelに所属しているユーザ一覧を表示する。
+  :move $(channel) -> クライアントの所属チャンネルを指定したchannelに移動する。
+  :create $(channel) -> 新しくchannelを作成し、クライアントの所属チャンネルを新しく作成したchannelへ移動する。
+  :delete $(channel) -> 指定したchannelを削除する。
+  :whisper $(username) $(message) -> 指定したusernameのユーザに対してmessageを送信する。
+  other -> クライアントが現在所属しているチャンネルに対してother(入力されたtext)を送信する。
+  """
 
   @doc """
   サーバサイドの処理を開始する前に初期化しておきたい情報を登録
@@ -233,12 +246,11 @@ defmodule ServerControll do
 
       {:create, pid, channel} ->
         Logger.info "Create command on server"
-        # TODO: 同じ名前のチャンネルがあった時のエラー
-        if Process.get(:channel_list) |> Enum.any?(&(&1 == channel)) do
+        if not (Process.get(:channel_list) |> Enum.any?(&(&1 == channel))) do
           Process.put(:channel_list, Process.get(:channel_list)++[channel])
           send(pid, {:announce, "Create #{channel} channel successful\n"})
         else
-          send(pid, {:announce, "#{channel} channel is already exist."})
+          send(pid, {:announce, "#{channel} channel is already exist.\n"})
         end
         server_loop()
 
@@ -281,20 +293,28 @@ defmodule ServerControll do
         Logger.info "Wihsper command on server"
         opp_data = get_user_data(%{username: opponent})
         cond do
-          opp_data == [] ->
+          opp_data == nil ->
             Logger.info "Not found user"
             send(pid, {:announce, "Not found user\n"})
-          opp_data |> Enum.at(0) |> get_username == send_user -> # TODO: ユーザ名がかぶってると想定外の動作になる
+          opp_data.username == send_user -> # TODO: ユーザ名がかぶってると想定外の動作になる
             Logger.info "Whisping to myself"
             send(pid, {:announce, "It's you!\n"})
           true ->
-            Logger.info "Whisping to #{opp_data |> Enum.at(0) |> get_username}"
-            send(opp_data |> Enum.at(0) |> get_pid, {:say, send_user, body})
+            Logger.info "Whisping to #{opp_data.username}"
+            send(pid, {:say, send_user <> " to " <> opp_data.username, body})
+            send(opp_data.pid, {:say, send_user, body})
         end
+        server_loop()
+
+      {:help, pid} -> # pidのユーザにヘルプを表示
+        Logger.info "Help command on server"
+        send(pid, {:announce, @help})
         server_loop()
 
       {:exit, pid} -> # pidのユーザをサーバから削除
         Logger.info "Exit command on server"
+        user_data = get_user_data(%{pid: pid})
+        saying(pid, {:leave, user_data.username, user_data.channel}, false)
         # exitしたpidのユーザ情報をfilterにかけて削除したものを再登録
         Process.put(
           :user,

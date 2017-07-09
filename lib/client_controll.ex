@@ -45,6 +45,10 @@ defmodule ClientControll do
       "error" ->
         # send(:chat_server, {:leave, announce_pid, "\\someone unexpected"})
         send(:chat_server, {:exit, announce_pid})
+      "help" ->
+        Logger.info "help command"
+        send(:chat_server, {:help, announce_pid})
+        client |> writing_wait(announce_pid)
       "exit" ->
         Logger.info "exit command"
         # send(:chat_server, {:leave, announce_pid, data.username})
