@@ -60,7 +60,8 @@ defmodule ServerControll do
 
   @doc """
   channelをちゃんとした状態に変換
-  TODO
+  妥当でないなら、デフォルトチャンネルを
+  妥当なら、そのまま返す。
   """
   def channel_check(channel) do
     cond do
