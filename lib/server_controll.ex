@@ -220,21 +220,23 @@ defmodule ServerControll do
   """
   def server_loop do
     receive do
-      {:new, pid, %{username: username, channel: channel}} ->  # 新しく参加したクライアントの情報を登録
+      # 新しく参加したクライアントの情報を登録
+      {:new, pid, %{username: username, channel: channel}} ->
         Logger.info "New connection create command on server"
         Process.put(:user, add_userdata(pid, username, channel))
         user_data = get_user_data(%{pid: pid})
-        # TODO: channelを初期設定できるようにする
         saying(pid, {:join, user_data.username, user_data.channel}, true)
         server_loop()
 
-      {:now_channel, pid} -> # リクエストしてきたクライアントが現在所属しているチャンネルをsend
+      # リクエストしてきたクライアントが現在所属しているチャンネルをsend
+      {:now_channel, pid} ->
         Logger.info "Now channel command on server"
         user_data = get_user_data(%{pid: pid})
         send(pid, {:announce, "#{user_data.channel}\n"})
         server_loop()
 
-      {:channel_list, pid} -> # サーバが保持しているチャンネルのリストをsend
+      # サーバが保持しているチャンネルのリストをsend
+      {:channel_list, pid} ->
         Logger.info "Channel list command on server"
         send(pid, {:channel_list, "#{Process.get(:channel_list) |> Enum.join("\n")}\n"})
         server_loop()
@@ -243,7 +245,6 @@ defmodule ServerControll do
       {:user_list_pid, pid} ->
         Logger.info "user list pid command on server"
         user_list = get_user_list(%{pid: pid})
-        # TODO: check 自分の所属しているチャンネルのユーザ一覧なので、絶対にユーザを見つけることができるはず
         send(pid, {:user_list, "#{user_list |> Enum.join("\n")}\n"})
         server_loop()
 
@@ -295,7 +296,8 @@ defmodule ServerControll do
         end
         server_loop()
 
-      {:move, pid, channel} -> # リクエストしてきたクライアントのチャンネルを指定されたチャンネルへmove
+      # リクエストしてきたクライアントのチャンネルを指定されたチャンネルへmove
+      {:move, pid, channel} ->
         Logger.info "Move command on server"
         cond do
           (get_user_data(%{pid: pid})).channel == channel ->
