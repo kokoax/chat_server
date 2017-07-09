@@ -374,7 +374,6 @@ defmodule ServerControll do
           opp_data == nil ->
             Logger.info "Not found user"
             send(pid, {:announce, "Not found user\n"})
-          # TODO: ユーザ名がかぶってると想定外の動作になる
           opp_data.username == send_user ->
             Logger.info "Whisping to myself"
             send(pid, {:announce, "It's you!\n"})
