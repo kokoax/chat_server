@@ -37,23 +37,68 @@ defmodule ServerControll do
     - username
     - channel: 初期は@def_channelで固定
   """
-  def add_userdata(pid, username, channel) do
+  def add_userdata(%{pid: pid, username: username, channel: channel}) do
     Logger.info "User add on Server"
-    channel = if channel == nil do
-      @def_channel
-    else
-      channel
-    end
+    new_user = %{pid: pid, username: username, channel: channel}
 
     have_user = Process.get(:user)
     # nilなら登録されているユーザがいないので、リスト連結ができないため
     # 処理を分けている
-    if have_user == nil do
+    new_userlist = if have_user == nil do
       Logger.info "put head pid"
-      [%{pid: pid, username: username, channel: channel}]
+      [new_user]
     else
       Logger.info "add pid"
-      have_user ++ [%{pid: pid, username: username, channel: channel}]
+      have_user ++ [new_user]
+    end
+    Process.put(
+      :user,
+      new_userlist
+    )
+    new_user
+  end
+
+  @doc """
+  channelをちゃんとした状態に変換
+  TODO
+  """
+  def channel_check(channel) do
+    cond do
+      channel == nil ->
+        @def_channel
+      Process.get(:channel_list) |> Enum.any?(&(&1 != channel)) ->
+        Process.put(
+          :channel_list,
+          Process.get(:channel_list) ++ [channel]
+        )
+        channel
+      true ->
+        channel
+    end
+  end
+
+  @doc """
+  ユーザの情報がサーバが保持するに当たって
+  妥当であるか判定して、ユーザデータを返す。
+  そうでないなら理由をstringで返す。
+  """
+  def user_check(pid, username, channel) do
+    all_user = Process.get(:user)
+    channel = channel_check(channel)
+
+    cond do
+      # ユーザ名に空白が含まれている
+      username =~ ~r/.*\s.*/ ->
+        {:err, "This username is contain whitespace.\n"}
+      # ユーザがいないなら被りようがない
+      all_user == nil ->
+        {:ok, %{pid: pid, username: username, channel: channel}}
+      # 既に存在するユーザ名
+      all_user |> Enum.any?(&(&1.username == username)) ->
+        {:err, "This username is already exist.\n"}
+      # 大丈夫なデータ
+      true ->
+        {:ok, %{pid: pid, username: username, channel: channel}}
     end
   end
 
@@ -223,10 +268,14 @@ defmodule ServerControll do
       # 新しく参加したクライアントの情報を登録
       {:new, pid, %{username: username, channel: channel}} ->
         Logger.info "New connection create command on server"
-        Process.put(:user, add_userdata(pid, username, channel))
-        user_data = get_user_data(%{pid: pid})
-        saying(pid, {:join, user_data.username, user_data.channel}, true)
-        server_loop()
+        case user_check(pid, username, channel) do
+          {:err, err_text} ->
+            send(pid, {:announce, err_text})
+          {:ok, new_user} ->
+            add_userdata(new_user)
+            saying(pid, {:join, new_user.username, new_user.channel}, true)
+            server_loop()
+        end
 
       # リクエストしてきたクライアントが現在所属しているチャンネルをsend
       {:now_channel, pid} ->
