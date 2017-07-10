@@ -1,8 +1,9 @@
-defmodule ClientControll do
+defmodule Tasks.ClientControll do
   @moduledoc """
   サーバに接続してきたクライアントそれぞれに、ソケットを開き、
   クライアントの、データ受信と送信を管理する。
   """
+  use GenServer
   require Logger
 
   @announce_user_name "announce-san"
@@ -45,50 +46,50 @@ defmodule ClientControll do
     case data.event do
       "help" ->
         Logger.info "help command"
-        send(:chat_server, {:help, announce_pid})
+        GenServer.cast(:chat_server, {:help, announce_pid})
         client |> writing_wait(announce_pid)
       "error" ->
         Logger.info "error happen in login"
-        send(:chat_server, {:exit, announce_pid})
+        GenServer.cast(:chat_server, {:exit, announce_pid})
       "exit" ->
         Logger.info "exit command"
-        send(:chat_server, {:exit, announce_pid})
+        GenServer.cast(:chat_server, {:exit, announce_pid})
       "user_list_pid" ->
         Logger.info "user list from pid command"
-        send(:chat_server, {:user_list_pid, announce_pid})
+        GenServer.cast(:chat_server, {:user_list_pid, announce_pid})
         client |> writing_wait(announce_pid)
       "user_list_channel" ->
         Logger.info "user list from channel command"
-        send(:chat_server, {:user_list_channel, announce_pid, data.channel})
+        GenServer.cast(:chat_server, {:user_list_channel, announce_pid, data.channel})
         client |> writing_wait(announce_pid)
       "channel_list" ->
         Logger.info "channel list command"
-        send(:chat_server, {:channel_list, announce_pid})
+        GenServer.cast(:chat_server, {:channel_list, announce_pid})
         client |> writing_wait(announce_pid)
       "now_channel" ->
         Logger.info "now channel command"
-        send(:chat_server, {:now_channel, announce_pid})
+        GenServer.cast(:chat_server, {:now_channel, announce_pid})
         client |> writing_wait(announce_pid)
       "move" ->
         Logger.info "move command"
-        send(:chat_server, {:move,  announce_pid, data.channel})
+        GenServer.cast(:chat_server, {:move,  announce_pid, data.channel})
         client |> writing_wait(announce_pid)
       "create" ->
         Logger.info "create command"
-        send(:chat_server, {:create, announce_pid, data.channel})
-        send(:chat_server, {:move,   announce_pid, data.channel})
+        GenServer.cast(:chat_server, {:create, announce_pid, data.channel})
+        GenServer.cast(:chat_server, {:move,   announce_pid, data.channel})
         client |> writing_wait(announce_pid)
       "delete" ->
         Logger.info "delete command"
-        send(:chat_server, {:delete, announce_pid, data.channel})
+        GenServer.cast(:chat_server, {:delete, announce_pid, data.channel})
         client |> writing_wait(announce_pid)
       "whisper" ->
         Logger.info "whisper command"
-        send(:chat_server, {:whisper, announce_pid, data.username, data.opponent, data.body})
+        GenServer.cast(:chat_server, {:whisper, announce_pid, data.username, data.opponent, data.body})
         client |> writing_wait(announce_pid)
       "say"  ->
         Logger.info "say command"
-        send(:chat_server, {:say, announce_pid, data.username, data.body})
+        GenServer.cast(:chat_server, {:say, announce_pid, data.username, data.body})
         client |> writing_wait(announce_pid)
     end
   end
@@ -182,7 +183,7 @@ defmodule ClientControll do
     # 実際にclientをcloseするのがannounce_waitプロセスのため、controlling_processに割り当てている
     :ok = :gen_tcp.controlling_process(client, announce.pid)
     # Clientからの切断要請を受け、writing.pidを接続されているクライアント一覧から削除するため
-    send(:chat_server, {:new, announce.pid, user_data |> eval})
+    GenServer.cast(:chat_server, {:new, announce.pid, user_data |> eval})
 
     Task.async(fn -> client |> writing_wait(announce.pid) end)
 

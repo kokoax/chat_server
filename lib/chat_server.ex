@@ -1,4 +1,4 @@
-defmodule ChatServer do
+defmodule ChatServer.Supervisor do
   @moduledoc """
   - CUIチャットシステムのサーバサイドの実装
   ## Arguments
@@ -15,10 +15,7 @@ defmodule ChatServer do
     - 現在存在するチャンネルのリスト
     - ``["general", "random", ...]``
   """
-
   require Logger
-  require ServerControll
-  require ClientControll
 
   @doc """
   サーバ実行のための引数の条件を満たしていない場合
@@ -31,13 +28,21 @@ defmodule ChatServer do
   portでサーバを起動して、クライアントからの接続受付を開始する
   """
   def do_process([port]) do
+    import Supervisor.Spec
+
+    {:ok, sock} = :gen_tcp.listen(port, [:binary, packet: 0, active: false])
+    children = [
+      worker(Tasks.ServerControll, [],     [name: :chat_server]),
+      # worker(Tasks.ClientControll, [sock], [name: :chat_client]),
+    ]
+    {:ok, pid} = Supervisor.start_link(children, strategy: :one_for_one)
+
     Logger.info "To Start Server Controll Loop"
-    pid = spawn_link(fn -> ServerControll.init_server_loop() end)
-    Process.register pid, :chat_server  # サーバプロセスのpidを:chat_serverというアトムに割り当てている
+    # pid = spawn_link(fn -> ServerControll.init_server_loop() end)
+    # Process.register pid, :chat_server  # サーバプロセスのpidを:chat_serverというアトムに割り当てている
 
     Logger.info "To Start Client Controll Loop"
-    {:ok, sock} = :gen_tcp.listen(port, [:binary, packet: 0, active: false])
-    ClientControll.client_loop(sock)
+    Tasks.ClientControll.client_loop(sock)
   end
 
   @doc """
