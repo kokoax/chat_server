@@ -376,9 +376,9 @@ defmodule Tasks.ServerControll do
         Logger.info "Success Move command"
         Logger.info "Move command on server"
         user_data = get_user_data(state, %{pid: pid})
-        saying(pid, {:leave, user_data.username, user_data.channel}, false)
+        saying(state, pid, {:leave, user_data.username, user_data.channel}, false)
         new_state = Map.put(state, :user, mod_channel(state, pid, channel))
-        saying(pid, {:join,  user_data.username, channel}, true)
+        saying(new_state, pid, {:join,  user_data.username, channel}, true)
         new_state
       true ->
         Logger.info "Not found channel"
